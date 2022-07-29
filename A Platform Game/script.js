@@ -184,9 +184,6 @@ var GAME_LEVELS = [`
 ..............................................................................................................
 `];
 
-if (typeof module != 'undefined' && module.exports && (typeof window == 'undefined' || window.exports != exports)) module.exports = GAME_LEVELS;
-if (typeof global != 'undefined' && !global.GAME_LEVELS) global.GAME_LEVELS = GAME_LEVELS;
-
 class Vec {
 	constructor(x, y) {
 		this.x = x;
@@ -239,6 +236,9 @@ class Lava {
 	}
 }
 
+// assigning lava size this way, insead of in the class, saves memory?
+// ?? They all share the same size property, instead of each piece of lava having it's own??
+// same with coin, etc.
 Lava.prototype.size = new Vec(1, 1);
 
 class Coin {
@@ -255,6 +255,13 @@ class Coin {
 	static create(pos) {
 		let basePos = pos.plus(new Vec(0.2, 0.1));
 		return new Coin(basePos, basePos, Math.random() * Math.PI * 2);
+	}
+
+	collide(state) {
+		let filtered = state.actors.filter(a => a != this);
+		let status = state.status;
+		if (!filtered.some(a => a.type == 'coin')) status = 'won';
+		return new State(state.level, filtered, status);
 	}
 }
 
@@ -288,7 +295,7 @@ class Level {
 				// if the type is 'empty', 'wall', or 'lava', return the string
 				let type = levelChars[char];
 				if (typeof type === 'string') return type;
-				// otherwise, push element to StartActors (only 4 Actors in level 1: Lava, Coin, Coin, Player)
+				// otherwise, push element to StartActors
 				// the typeof these Actors are classes
 				// (their literal typeof is 'function', but that's because classes are just constructor functions),
 				// so the .create() method (NOT TO BE CONFUSED with the Object.create() method!!)
@@ -334,6 +341,7 @@ function elt(name, attrs, ...children) {
 	return dom;
 }
 
+// Creates "game playing" div
 // prettier-ignore
 class DOMDisplay {
 	constructor(parent, level) {
@@ -346,6 +354,7 @@ class DOMDisplay {
 	}
 }
 
+// creates "background" table
 const scale = 20;
 // prettier-ignore
 function drawGrid(level) {
@@ -358,10 +367,12 @@ function drawGrid(level) {
   )
 }
 
+// creates actors div
+// note that because this is constantly being redrawn with .syncState, it cannot really be "inspected" in Chrome
 function drawActors(actors) {
 	return elt(
 		'div',
-		{},
+		{ class: 'actors' },
 		...actors.map(actor => {
 			let rect = elt('div', { class: `actor ${actor.type}` });
 			rect.style.width = `${actor.size.x * scale}px`;
@@ -456,12 +467,12 @@ Lava.prototype.collide = function (state) {
 	return new State(state.level, state.actors, 'lost');
 };
 
-Coin.prototype.collide = function (state) {
+/* Coin.prototype.collide = function (state) {
 	let filtered = state.actors.filter(a => a != this);
 	let status = state.status;
 	if (!filtered.some(a => a.type == 'coin')) status = 'won';
 	return new State(state.level, filtered, status);
-};
+}; */
 
 // Updating the actors
 Lava.prototype.update = function (time, state) {

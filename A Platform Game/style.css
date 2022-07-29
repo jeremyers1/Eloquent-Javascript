@@ -29,10 +29,12 @@
 
 .coin {
 	background: rgb(241, 229, 89);
+	border-radius: 5px;
 }
 
 .player {
 	background: rgb(64, 64, 64);
+	border-radius: 7px 7px 0 0;
 }
 
 .lost .player {
