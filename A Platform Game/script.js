@@ -184,6 +184,9 @@ var GAME_LEVELS = [`
 ..............................................................................................................
 `];
 
+if (typeof module != 'undefined' && module.exports && (typeof window == 'undefined' || window.exports != exports)) module.exports = GAME_LEVELS;
+if (typeof global != 'undefined' && !global.GAME_LEVELS) global.GAME_LEVELS = GAME_LEVELS;
+
 class Vec {
 	constructor(x, y) {
 		this.x = x;
@@ -236,9 +239,6 @@ class Lava {
 	}
 }
 
-// assigning lava size this way, insead of in the class, saves memory?
-// ?? They all share the same size property, instead of each piece of lava having it's own??
-// same with coin, etc.
 Lava.prototype.size = new Vec(1, 1);
 
 class Coin {
@@ -288,7 +288,7 @@ class Level {
 				// if the type is 'empty', 'wall', or 'lava', return the string
 				let type = levelChars[char];
 				if (typeof type === 'string') return type;
-				// otherwise, push element to StartActors
+				// otherwise, push element to StartActors (only 4 Actors in level 1: Lava, Coin, Coin, Player)
 				// the typeof these Actors are classes
 				// (their literal typeof is 'function', but that's because classes are just constructor functions),
 				// so the .create() method (NOT TO BE CONFUSED with the Object.create() method!!)
@@ -334,7 +334,6 @@ function elt(name, attrs, ...children) {
 	return dom;
 }
 
-// Creates "game playing" div
 // prettier-ignore
 class DOMDisplay {
 	constructor(parent, level) {
@@ -347,7 +346,6 @@ class DOMDisplay {
 	}
 }
 
-// creates "background" table
 const scale = 20;
 // prettier-ignore
 function drawGrid(level) {
@@ -360,12 +358,10 @@ function drawGrid(level) {
   )
 }
 
-// creates actors div
-// note that because this is constantly being redrawn with .syncState, it cannot really be "inspected" in Chrome
 function drawActors(actors) {
 	return elt(
 		'div',
-		{ class: 'actors' },
+		{},
 		...actors.map(actor => {
 			let rect = elt('div', { class: `actor ${actor.type}` });
 			rect.style.width = `${actor.size.x * scale}px`;
@@ -457,7 +453,6 @@ function overlap(actor1, actor2) {
 }
 
 Lava.prototype.collide = function (state) {
-	lives--;
 	return new State(state.level, state.actors, 'lost');
 };
 
@@ -515,6 +510,22 @@ Player.prototype.update = function (time, state, keys) {
 	return new Player(pos, new Vec(xSpeed, ySpeed));
 };
 
+// Tracking Keys
+function trackKeys(keys) {
+	let down = Object.create(null);
+	function track(event) {
+		if (keys.includes(event.key)) {
+			down[event.key] = event.type == 'keydown';
+			event.preventDefault();
+		}
+	}
+	window.addEventListener('keydown', track);
+	window.addEventListener('keyup', track);
+	return down;
+}
+
+const arrowKeys = trackKeys(['ArrowLeft', 'ArrowRight', 'ArrowUp']);
+
 // Running the Game
 function runAnimation(frameFunc) {
 	let lastTime = null;
@@ -529,50 +540,12 @@ function runAnimation(frameFunc) {
 	requestAnimationFrame(frame);
 }
 
-// To know when to stop and restart the animation, a level that is
-// being displayed may be in three `running` states:
-//
-// * "yes":     Running normally.
-// * "no":      Paused, animation isn't running
-// * "pausing": Must pause, but animation is still running
-//
-// The key handler, when it notices escape being pressed, will do a
-// different thing depending on the current state. When running is
-// "yes" or "pausing", it will switch to the other of those two
-// states. When it is "no", it will restart the animation and switch
-// the state to "yes".
-//
-// The animation function, when state is "pausing", will set the state
-// to "no" and return false to stop the animation.
-
 function runLevel(level, Display) {
 	let display = new Display(document.body, level);
 	let state = State.start(level);
 	let ending = 1;
-	let running = 'yes';
-
 	return new Promise(resolve => {
-		function escHandler(event) {
-			if (event.key != 'Escape') return;
-			event.preventDefault();
-			if (running == 'no') {
-				running = 'yes';
-				runAnimation(frame);
-			} else if (running == 'yes') {
-				running = 'pausing';
-			} else {
-				running = 'yes';
-			}
-		}
-		window.addEventListener('keydown', escHandler);
-		let arrowKeys = trackKeys(['ArrowLeft', 'ArrowRight', 'ArrowUp']);
-
-		function frame(time) {
-			if (running == 'pausing') {
-				running = 'no';
-				return false;
-			}
-
+		runAnimation(time => {
 			state = state.update(time, arrowKeys);
 			display.syncState(state);
 			if (state.status == 'playing') {
@@ -582,31 +555,11 @@ function runLevel(level, Display) {
 				return true;
 			} else {
 				display.clear();
-				window.removeEventListener('keydown', escHandler);
-				arrowKeys.unregister();
 				resolve(state.status);
 				return false;
 			}
-		}
-		runAnimation(frame);
+		});
 	});
-}
-
-function trackKeys(keys) {
-	let down = Object.create(null);
-	function track(event) {
-		if (keys.includes(event.key)) {
-			down[event.key] = event.type == 'keydown';
-			event.preventDefault();
-		}
-	}
-	window.addEventListener('keydown', track);
-	window.addEventListener('keyup', track);
-	down.unregister = () => {
-		window.removeEventListener('keydown', track);
-		window.removeEventListener('keyup', track);
-	};
-	return down;
 }
 
 let livesLeft = document.querySelector('.lives');
