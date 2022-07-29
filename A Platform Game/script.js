@@ -256,13 +256,6 @@ class Coin {
 		let basePos = pos.plus(new Vec(0.2, 0.1));
 		return new Coin(basePos, basePos, Math.random() * Math.PI * 2);
 	}
-
-	collide(state) {
-		let filtered = state.actors.filter(a => a != this);
-		let status = state.status;
-		if (!filtered.some(a => a.type == 'coin')) status = 'won';
-		return new State(state.level, filtered, status);
-	}
 }
 
 Coin.prototype.size = new Vec(0.6, 0.6);
@@ -464,15 +457,16 @@ function overlap(actor1, actor2) {
 }
 
 Lava.prototype.collide = function (state) {
+	lives--;
 	return new State(state.level, state.actors, 'lost');
 };
 
-/* Coin.prototype.collide = function (state) {
+Coin.prototype.collide = function (state) {
 	let filtered = state.actors.filter(a => a != this);
 	let status = state.status;
 	if (!filtered.some(a => a.type == 'coin')) status = 'won';
 	return new State(state.level, filtered, status);
-}; */
+};
 
 // Updating the actors
 Lava.prototype.update = function (time, state) {
@@ -521,22 +515,6 @@ Player.prototype.update = function (time, state, keys) {
 	return new Player(pos, new Vec(xSpeed, ySpeed));
 };
 
-// Tracking Keys
-function trackKeys(keys) {
-	let down = Object.create(null);
-	function track(event) {
-		if (keys.includes(event.key)) {
-			down[event.key] = event.type == 'keydown';
-			event.preventDefault();
-		}
-	}
-	window.addEventListener('keydown', track);
-	window.addEventListener('keyup', track);
-	return down;
-}
-
-const arrowKeys = trackKeys(['ArrowLeft', 'ArrowRight', 'ArrowUp']);
-
 // Running the Game
 function runAnimation(frameFunc) {
 	let lastTime = null;
@@ -551,12 +529,50 @@ function runAnimation(frameFunc) {
 	requestAnimationFrame(frame);
 }
 
+// To know when to stop and restart the animation, a level that is
+// being displayed may be in three `running` states:
+//
+// * "yes":     Running normally.
+// * "no":      Paused, animation isn't running
+// * "pausing": Must pause, but animation is still running
+//
+// The key handler, when it notices escape being pressed, will do a
+// different thing depending on the current state. When running is
+// "yes" or "pausing", it will switch to the other of those two
+// states. When it is "no", it will restart the animation and switch
+// the state to "yes".
+//
+// The animation function, when state is "pausing", will set the state
+// to "no" and return false to stop the animation.
+
 function runLevel(level, Display) {
 	let display = new Display(document.body, level);
 	let state = State.start(level);
 	let ending = 1;
+	let running = 'yes';
+
 	return new Promise(resolve => {
-		runAnimation(time => {
+		function escHandler(event) {
+			if (event.key != 'Escape') return;
+			event.preventDefault();
+			if (running == 'no') {
+				running = 'yes';
+				runAnimation(frame);
+			} else if (running == 'yes') {
+				running = 'pausing';
+			} else {
+				running = 'yes';
+			}
+		}
+		window.addEventListener('keydown', escHandler);
+		let arrowKeys = trackKeys(['ArrowLeft', 'ArrowRight', 'ArrowUp']);
+
+		function frame(time) {
+			if (running == 'pausing') {
+				running = 'no';
+				return false;
+			}
+
 			state = state.update(time, arrowKeys);
 			display.syncState(state);
 			if (state.status == 'playing') {
@@ -566,19 +582,51 @@ function runLevel(level, Display) {
 				return true;
 			} else {
 				display.clear();
+				window.removeEventListener('keydown', escHandler);
+				arrowKeys.unregister();
 				resolve(state.status);
 				return false;
 			}
-		});
+		}
+		runAnimation(frame);
 	});
 }
 
+function trackKeys(keys) {
+	let down = Object.create(null);
+	function track(event) {
+		if (keys.includes(event.key)) {
+			down[event.key] = event.type == 'keydown';
+			event.preventDefault();
+		}
+	}
+	window.addEventListener('keydown', track);
+	window.addEventListener('keyup', track);
+	down.unregister = () => {
+		window.removeEventListener('keydown', track);
+		window.removeEventListener('keyup', track);
+	};
+	return down;
+}
+
+let livesLeft = document.querySelector('.lives');
+
+// TODO: Keep score based on number of coins collected in a level.
+// must restart level score if life is lost
 async function runGame(plans, Display) {
-	for (let level = 0; level < plans.length; ) {
+	let lives = 3;
+	for (let level = 0; level < plans.length && lives > 0; ) {
+		livesLeft.textContent = `Lives Left: ${lives}`;
 		let status = await runLevel(new Level(plans[level]), Display);
 		if (status == 'won') level++;
+		else lives--;
 	}
-	console.log("You've won!");
+	if (lives > 0) {
+		livesLeft.textContent = 'You won! Keep going to improve your score.';
+	} else {
+		livesLeft.textContent = 'You ran out of lives and lost the game!';
+		// TODO: Add a restart button
+	}
 }
 
 /// lock and load
