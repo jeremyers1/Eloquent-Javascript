@@ -189,6 +189,7 @@ var GAME_LEVELS = [`
 // TODO: On some screen sizes, the words and instructions are hidden behind the Canvas. Fix this
 // TODO: Enable jump with mouseclick
 const scale = 20;
+const setLives = 100;
 
 function flipHorizontally(context, around) {
 	context.translate(around, 0);
@@ -196,12 +197,12 @@ function flipHorizontally(context, around) {
 	context.translate(-around, 0);
 }
 
-class CanvasDisplay {
-	constructor(parent, level) {
+let CanvasDisplay = class CanvasDisplay {
+	constructor(level) {
 		this.canvas = document.getElementById('canvas');
 		this.canvas.width = Math.min(600, level.width * scale);
 		this.canvas.height = Math.min(450, level.height * scale);
-		parent.appendChild(this.canvas);
+		//parent.appendChild(this.canvas);
 		this.cx = this.canvas.getContext('2d');
 
 		this.flipPlayer = false;
@@ -212,10 +213,6 @@ class CanvasDisplay {
 			width: this.canvas.width / scale,
 			height: this.canvas.height / scale,
 		};
-	}
-
-	clear() {
-		this.canvas.remove();
 	}
 };
 
@@ -723,7 +720,7 @@ function trackKeys(keys) {
 
 function runLevel(level, Display) {
 	// CanvasDisplay is passed in as Display here
-	let display = new Display(document.body, level);
+	let display = new Display(level);
 	let state = State.start(level);
 	let ending = 1;
 	let running = 'yes';
@@ -759,7 +756,6 @@ function runLevel(level, Display) {
 				ending -= time;
 				return true;
 			} else {
-				display.clear();
 				window.removeEventListener('keydown', escHandler);
 				arrowKeys.unregister();
 				resolve(state.status);
@@ -794,7 +790,8 @@ let livesLeft = document.querySelector('.lives');
 // TODO: Keep score based on number of coins collected in a level.
 // must restart level score if life is lost
 async function runGame(plans, Display) {
-	let lives = 100;
+	// CanvasDisplay is passed in as Display here
+	let lives = setLives;
 	for (let level = 0; level < plans.length && lives > 0; ) {
 		livesLeft.textContent = `Lives Left: ${lives}`;
 		let status = await runLevel(new Level(plans[level]), Display);
@@ -804,6 +801,9 @@ async function runGame(plans, Display) {
 	if (lives > 0) {
 		livesLeft.textContent = 'You won! Keep going to improve your score.';
 	} else {
+		//Display.clear(); // doesn't work...
+		const canvas = document.getElementById('canvas');
+		canvas.remove();
 		livesLeft.textContent = 'You ran out of lives and lost the game!';
 		// TODO: Add a restart button
 	}
