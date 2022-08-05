@@ -4,7 +4,7 @@ let ctx = canvas.getContext('2d');
 // if you have h/w css settings, MATCH them here
 // otherwise, anything inside the canvas will be skewed
 canvas.height = 800;
-canvas.width = 500;
+canvas.width = 800;
 
 ctx.fillStyle = 'red';
 ctx.fillRect(10, 10, 100, 50);
@@ -95,7 +95,7 @@ ctx.arc(300, 300, 50, 0, 1);
 //ctx.closePath();
 ctx.stroke();
 
-// pie chart
+// pie chart moved to bottom for text excercise
 const results = [
 	{ name: 'Satisfied', count: 1043, color: 'lightblue' },
 	{ name: 'Neutral', count: 563, color: 'lightgreen' },
@@ -193,3 +193,101 @@ ctx.save();
 ctx.translate(250, 500);
 branch(60, 0.5, 0.8);
 ctx.restore();
+
+// Exercise 1 p. 307
+
+function trapezoid(x, y) {
+	ctx.beginPath();
+	ctx.moveTo(x, y);
+	ctx.lineTo(x + 50, y);
+	ctx.lineTo(x + 70, y + 50);
+	ctx.lineTo(x - 20, y + 50);
+	ctx.closePath();
+	ctx.strokeStyle = 'red';
+	ctx.stroke();
+}
+trapezoid(500, 400);
+
+function diamond(x, y) {
+	ctx.translate(x, y);
+	ctx.rotate(Math.PI / 4);
+	ctx.fillStyle = 'red';
+	ctx.fillRect(-30, -30, 60, 60);
+	ctx.resetTransform();
+}
+diamond(650, 420);
+
+function zigzag(x, y) {
+	ctx.beginPath();
+	ctx.moveTo(x, y);
+	for (let i = 0; i < 8; i++) {
+		ctx.lineTo(x + 80, y + i * 8 + 4);
+		ctx.lineTo(x, y + i * 8 + 8);
+	}
+	ctx.stroke();
+}
+zigzag(500, 500);
+
+function spiral(x, y) {
+	let radius = 50,
+		xCenter = x + radius,
+		yCenter = y + radius;
+	ctx.beginPath();
+	ctx.moveTo(xCenter, yCenter);
+	for (let i = 0; i < 300; i++) {
+		let angle = (i * Math.PI) / 30;
+		let dist = (radius * i) / 300;
+		ctx.lineTo(xCenter + Math.cos(angle) * dist, yCenter + Math.sin(angle) * dist);
+	}
+	ctx.stroke();
+}
+spiral(600, 500);
+
+function star(x, y) {
+	let radius = 50,
+		xCenter = x + radius,
+		yCenter = y + radius;
+	ctx.beginPath();
+	ctx.moveTo(xCenter + radius, yCenter);
+	for (let i = 1; i <= 8; i++) {
+		let angle = (i * Math.PI) / 4;
+		ctx.quadraticCurveTo(xCenter, yCenter, xCenter + Math.cos(angle) * radius, yCenter + Math.sin(angle) * radius);
+	}
+	ctx.fillStyle = 'gold';
+	ctx.fill();
+}
+star(550, 620);
+
+// Pie Chart with text
+
+let total2 = results.reduce(function (sum, choice) {
+	return sum + choice.count;
+}, 0);
+
+let currentAngle2 = -0.5 * Math.PI;
+let centerX = 620,
+	centerY = 175;
+
+results.forEach(function (result) {
+	let sliceAngle2 = (result.count / total2) * 2 * Math.PI;
+	ctx.beginPath();
+	ctx.arc(centerX, centerY, 100, currentAngle2, currentAngle2 + sliceAngle2);
+
+	let middleAngle = currentAngle2 + 0.5 * sliceAngle2;
+	let textX = Math.cos(middleAngle) * 120 + centerX;
+	let textY = Math.sin(middleAngle) * 120 + centerY;
+	ctx.textBaseLine = 'middle';
+	if (Math.cos(middleAngle) > 0) {
+		ctx.textAlign = 'left';
+	} else {
+		ctx.textAlign = 'right';
+	}
+	ctx.font = '15px sans-serif';
+	ctx.fillStyle = 'black';
+	ctx.fillText(result.name, textX, textY);
+
+	currentAngle2 += sliceAngle2;
+	ctx.lineTo(centerX, centerY);
+	ctx.fillStyle = result.color;
+	ctx.fill();
+});
