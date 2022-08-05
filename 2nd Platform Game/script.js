@@ -183,10 +183,7 @@ var GAME_LEVELS = [`
 ..................................................############################################################
 ..............................................................................................................
 `];
-// TODO: Add green monsters ... can be killed if jumped upon
-// TODO: DONE! add smaller w and h using Math.min in constructor below, and then center screen on player sprite, having game area scroll with him ... just like in Super Mario Bros
-// TODO: On some screen sizes, the words and instructions are hidden behind the Canvas. Fix this
-// TODO: Enable jump with mouseclick
+
 const scale = 20;
 
 function flipHorizontally(context, around) {
@@ -197,7 +194,7 @@ function flipHorizontally(context, around) {
 
 let CanvasDisplay = class CanvasDisplay {
 	constructor(parent, level) {
-		this.canvas = document.getElementById('canvas');
+		this.canvas = document.createElement('canvas');
 		this.canvas.width = Math.min(600, level.width * scale);
 		this.canvas.height = Math.min(450, level.height * scale);
 		parent.appendChild(this.canvas);
@@ -423,7 +420,7 @@ class Level {
 				// the typeof these Actors are classes
 				// (their literal typeof is 'function', but that's because classes are just constructor functions),
 				// so the .create() method (NOT TO BE CONFUSED with the Object.create() method!!)
-				// is called to make an Actor, as it is defined in the static create() section of each class.
+				// is called make an Actor, as it is defined in the static create() section of each class.
 				// Frankly, since everything is an object in JS, it is VERY confusing for him to have written
 				// a.create() method inside the Actors classes
 				// Also, I am not fully sure why .create is used to make the Actors, rather than the constructor.
@@ -557,8 +554,8 @@ Level.prototype.touches = function (pos, size, type) {
 	return false;
 };
 
-State.prototype.update = function (time, keys, mouse) {
-	let actors = this.actors.map(actor => actor.update(time, this, keys, mouse));
+State.prototype.update = function (time, keys) {
+	let actors = this.actors.map(actor => actor.update(time, this, keys));
 	let newState = new State(this.level, actors, this.status);
 
 	if (newState.status != 'playing') return newState;
@@ -620,12 +617,7 @@ const playerXSpeed = 7;
 const gravity = 30;
 const jumpSpeed = 17;
 
-let mouseClick = false;
-window.addEventListener('click', () => {
-	mouseClick = true;
-});
-
-Player.prototype.update = function (time, state, keys, mouse) {
+Player.prototype.update = function (time, state, keys) {
 	let xSpeed = 0;
 	if (keys.ArrowLeft) xSpeed -= playerXSpeed;
 	if (keys.ArrowRight) xSpeed += playerXSpeed;
@@ -634,14 +626,12 @@ Player.prototype.update = function (time, state, keys, mouse) {
 	if (!state.level.touches(movedX, this.size, 'wall')) {
 		pos = movedX;
 	}
+
 	let ySpeed = this.speed.y + time * gravity;
 	let movedY = pos.plus(new Vec(0, ySpeed * time));
 	if (!state.level.touches(movedY, this.size, 'wall')) {
 		pos = movedY;
-		mouseClick = false; //reset mouseClick to false when player touches wall
-	} else if (keys.ArrowUp || keys.Enter || (keys[' '] && ySpeed > 0)) {
-		ySpeed = -jumpSpeed;
-	} else if (mouse) {
+	} else if (keys.ArrowUp && ySpeed > 0) {
 		ySpeed = -jumpSpeed;
 	} else {
 		ySpeed = 0;
@@ -738,6 +728,7 @@ function runLevel(level, Display) {
 			}
 		}
 		window.addEventListener('keydown', escHandler);
+		let arrowKeys = trackKeys(['ArrowLeft', 'ArrowRight', 'ArrowUp']);
 
 		function frame(time) {
 			if (running == 'pausing') {
@@ -745,7 +736,7 @@ function runLevel(level, Display) {
 				return false;
 			}
 
-			state = state.update(time, arrowKeys, mouseClick);
+			state = state.update(time, arrowKeys);
 			display.syncState(state);
 			if (state.status == 'playing') {
 				return true;
@@ -764,7 +755,6 @@ function runLevel(level, Display) {
 	});
 }
 
-// removs default behavior for keys pressed
 function trackKeys(keys) {
 	let down = Object.create(null);
 	function track(event) {
@@ -775,7 +765,6 @@ function trackKeys(keys) {
 	}
 	window.addEventListener('keydown', track);
 	window.addEventListener('keyup', track);
-
 	down.unregister = () => {
 		window.removeEventListener('keydown', track);
 		window.removeEventListener('keyup', track);
@@ -783,8 +772,7 @@ function trackKeys(keys) {
 	return down;
 }
 
-const arrowKeys = trackKeys(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'Enter', ' ']);
-//window.addEventListener('keydown', (e) => console.log(e));
+const arrowKeys = trackKeys(['ArrowLeft', 'ArrowRight', 'ArrowUp']);
 
 let livesLeft = document.querySelector('.lives');
 
