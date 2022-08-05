@@ -557,8 +557,8 @@ Level.prototype.touches = function (pos, size, type) {
 	return false;
 };
 
-State.prototype.update = function (time, keys) {
-	let actors = this.actors.map(actor => actor.update(time, this, keys));
+State.prototype.update = function (time, keys, mouse) {
+	let actors = this.actors.map(actor => actor.update(time, this, keys, mouse));
 	let newState = new State(this.level, actors, this.status);
 
 	if (newState.status != 'playing') return newState;
@@ -620,7 +620,12 @@ const playerXSpeed = 7;
 const gravity = 30;
 const jumpSpeed = 17;
 
-Player.prototype.update = function (time, state, keys) {
+let mouseClick = false;
+window.addEventListener('click', () => {
+	mouseClick = true;
+});
+
+Player.prototype.update = function (time, state, keys, mouse) {
 	let xSpeed = 0;
 	if (keys.ArrowLeft) xSpeed -= playerXSpeed;
 	if (keys.ArrowRight) xSpeed += playerXSpeed;
@@ -629,16 +634,16 @@ Player.prototype.update = function (time, state, keys) {
 	if (!state.level.touches(movedX, this.size, 'wall')) {
 		pos = movedX;
 	}
-
 	let ySpeed = this.speed.y + time * gravity;
 	let movedY = pos.plus(new Vec(0, ySpeed * time));
 	if (!state.level.touches(movedY, this.size, 'wall')) {
 		pos = movedY;
-	} else if (keys.ArrowUp || keys.Enter || keys[' '] && ySpeed > 0) {
+		mouseClick = false; //reset mouseClick to false when player touches wall
+	} else if (keys.ArrowUp || keys.Enter || (keys[' '] && ySpeed > 0)) {
 		ySpeed = -jumpSpeed;
-	}	else if (keys.mousedown && ySpeed > 0) {
+	} else if (mouse) {
 		ySpeed = -jumpSpeed;
-	}else {
+	} else {
 		ySpeed = 0;
 	}
 	return new Player(pos, new Vec(xSpeed, ySpeed));
@@ -740,7 +745,7 @@ function runLevel(level, Display) {
 				return false;
 			}
 
-			state = state.update(time, arrowKeys);
+			state = state.update(time, arrowKeys, mouseClick);
 			display.syncState(state);
 			if (state.status == 'playing') {
 				return true;
@@ -759,6 +764,7 @@ function runLevel(level, Display) {
 	});
 }
 
+// removs default behavior for keys pressed
 function trackKeys(keys) {
 	let down = Object.create(null);
 	function track(event) {
