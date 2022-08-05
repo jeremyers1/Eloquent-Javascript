@@ -3,7 +3,7 @@ let canvas = document.getElementById('canvas1');
 let ctx = canvas.getContext('2d');
 // if you have h/w css settings, MATCH them here
 // otherwise, anything inside the canvas will be skewed
-canvas.height = 500;
+canvas.height = 800;
 canvas.width = 500;
 
 ctx.fillStyle = 'red';
@@ -123,3 +123,73 @@ ctx.font = '12pt Georgia';
 ctx.fillStyle = 'fuchsia';
 ctx.fillText('I can draw text, too!', 320, 50);
 // can use text.Align and textBaseline to arrange text location
+
+//adding image to canvas
+let img = new Image();
+img.src = 'img/sprites.png';
+img.addEventListener('load', () => {
+	ctx.drawImage(img, 175, 400); // img.src, dx, dy
+	ctx.drawImage(img, 175, 425, 104, 40); // src, dx, dy, dw, dh
+	ctx.drawImage(img, 0, 0, 20, 40, 275, 400, 20, 40); // src, sx, sy, sw, sh, dx, dy, dw, dh
+});
+
+// to animate a sprite on canvas
+let sprite = new Image();
+sprite.src = 'img/player.png';
+let spriteW = 24;
+let spriteH = 30;
+sprite.addEventListener('load', () => {
+	let cycle = 0;
+	setInterval(() => {
+		ctx.clearRect(300, 400, spriteW, spriteH);
+		ctx.drawImage(sprite, cycle * spriteW, 0, spriteW, spriteH, 300, 400, spriteW, spriteH);
+		cycle = (cycle + 1) % 8; //cycles through first 8 frames of sprite (running)
+	}, 120);
+});
+
+// transformation using scale()
+// due to scaling, this causes images above to go off screen
+/* ctx.strokeStyle = 'blue';
+ctx.scale(3, 0.5); 
+ctx.beginPath(0);
+ctx.arc(100, 800, 40, 0, 7);
+ctx.lineWidth = 3;
+ctx.stroke(); */
+
+function flipHorizontally(context, around) {
+	context.translate(around, 0);
+	context.scale(-1, 1); // for some reason, this flips BOTH calls to sprite, rather than just sprite2
+	// error is fixed by calling .save() and .restore() as found below... However, see note below function
+	context.translate(-around, 0);
+}
+// Furthermore, according to
+// https://stackoverflow.com/questions/8168217/html-canvas-how-to-draw-a-flipped-mirrored-image
+// it's insanely faster to just have a separate reversed sprite file
+
+let sprite2 = new Image();
+sprite2.src = 'img/player.png';
+let sprite2W = 24;
+let sprite2H = 30;
+sprite2.addEventListener('load', () => {
+	ctx.save();
+	flipHorizontally(ctx, 350 + sprite2W / 2);
+	ctx.drawImage(sprite2, 0, 0, sprite2W, sprite2H, 350, 400, sprite2W, sprite2H);
+	ctx.restore();
+});
+
+function branch(length, angle, scale) {
+	ctx.fillRect(0, 0, 1, length);
+	if (length < 8) return;
+	ctx.save();
+	ctx.translate(0, length);
+	ctx.rotate(-angle);
+	branch(length * scale, angle, scale);
+	ctx.rotate(2 * angle);
+	branch(length * scale, angle, scale);
+	ctx.restore();
+}
+ctx.fillStyle = 'brown';
+ctx.save();
+ctx.translate(250, 500);
+branch(60, 0.5, 0.8);
+ctx.restore();
