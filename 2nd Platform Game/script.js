@@ -199,8 +199,8 @@ function flipHorizontally(context, around) {
 let CanvasDisplay = class CanvasDisplay {
 	constructor(parent, level) {
 		this.canvas = document.createElement('canvas');
-		this.canvas.width = level.width * scale;
-		this.canvas.height = level.height * scale;
+		this.canvas.width = Math.min(600, level.width * scale);
+		this.canvas.height = Math.min(450,level.height * scale);
 		parent.appendChild(this.canvas);
 		this.cx = this.canvas.getContext('2d');
 
@@ -566,6 +566,8 @@ State.prototype.update = function (time, keys, mouse) {
 
 	let player = newState.player;
 	if (this.level.touches(player.pos, player.size, 'lava')) {
+		// *** TODO: Can I make him jump when he touches lava?
+		// new Player(player.pos, new Vec(0, -jumpSpeed));
 		return new State(this.level, actors, 'lost');
 	}
 
