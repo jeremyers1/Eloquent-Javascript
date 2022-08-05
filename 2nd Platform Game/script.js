@@ -196,11 +196,11 @@ function flipHorizontally(context, around) {
 	context.translate(-around, 0);
 }
 
-let CanvasDisplay = class CanvasDisplay {
+class CanvasDisplay {
 	constructor(parent, level) {
-		this.canvas = document.createElement('canvas');
+		this.canvas = document.getElementById('canvas');
 		this.canvas.width = Math.min(600, level.width * scale);
-		this.canvas.height = Math.min(450,level.height * scale);
+		this.canvas.height = Math.min(450, level.height * scale);
 		parent.appendChild(this.canvas);
 		this.cx = this.canvas.getContext('2d');
 
@@ -722,6 +722,7 @@ function trackKeys(keys) {
 // to "no" and return false to stop the animation.
 
 function runLevel(level, Display) {
+	// CanvasDisplay is passed in as Display here
 	let display = new Display(document.body, level);
 	let state = State.start(level);
 	let ending = 1;
