@@ -184,6 +184,10 @@ var GAME_LEVELS = [`
 ..............................................................................................................
 `];
 
+// TODO: Add green monsters ... can be killed if jumped upon
+// TODO: DONE! add smaller w and h using Math.min in constructor below, and then center screen on player sprite, having game area scroll with him ... just like in Super Mario Bros
+// TODO: On some screen sizes, the words and instructions are hidden behind the Canvas. Fix this
+// TODO: Enable jump with mouseclick
 const scale = 20;
 
 function flipHorizontally(context, around) {
@@ -554,8 +558,8 @@ Level.prototype.touches = function (pos, size, type) {
 	return false;
 };
 
-State.prototype.update = function (time, keys) {
-	let actors = this.actors.map(actor => actor.update(time, this, keys));
+State.prototype.update = function (time, keys, mouse) {
+	let actors = this.actors.map(actor => actor.update(time, this, keys, mouse));
 	let newState = new State(this.level, actors, this.status);
 
 	if (newState.status != 'playing') return newState;
@@ -617,7 +621,12 @@ const playerXSpeed = 7;
 const gravity = 30;
 const jumpSpeed = 17;
 
-Player.prototype.update = function (time, state, keys) {
+let mouseClick = false;
+window.addEventListener('click', () => {
+	mouseClick = true;
+});
+
+Player.prototype.update = function (time, state, keys, mouse) {
 	let xSpeed = 0;
 	if (keys.ArrowLeft) xSpeed -= playerXSpeed;
 	if (keys.ArrowRight) xSpeed += playerXSpeed;
@@ -626,12 +635,14 @@ Player.prototype.update = function (time, state, keys) {
 	if (!state.level.touches(movedX, this.size, 'wall')) {
 		pos = movedX;
 	}
-
 	let ySpeed = this.speed.y + time * gravity;
 	let movedY = pos.plus(new Vec(0, ySpeed * time));
 	if (!state.level.touches(movedY, this.size, 'wall')) {
 		pos = movedY;
-	} else if (keys.ArrowUp && ySpeed > 0) {
+		mouseClick = false; //reset mouseClick to false when player touches wall
+	} else if (keys.ArrowUp || keys.Enter || (keys[' '] && ySpeed > 0)) {
+		ySpeed = -jumpSpeed;
+	} else if (mouse) {
 		ySpeed = -jumpSpeed;
 	} else {
 		ySpeed = 0;
@@ -728,7 +739,8 @@ function runLevel(level, Display) {
 			}
 		}
 		window.addEventListener('keydown', escHandler);
-		let arrowKeys = trackKeys(['ArrowLeft', 'ArrowRight', 'ArrowUp']);
+		const arrowKeys = trackKeys(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'Enter', ' ']);
+		//window.addEventListener('keydown', (e) => console.log(e));
 
 		function frame(time) {
 			if (running == 'pausing') {
@@ -736,7 +748,7 @@ function runLevel(level, Display) {
 				return false;
 			}
 
-			state = state.update(time, arrowKeys);
+			state = state.update(time, arrowKeys, mouseClick);
 			display.syncState(state);
 			if (state.status == 'playing') {
 				return true;
