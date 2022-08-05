@@ -206,7 +206,7 @@ function trapezoid(x, y) {
 	ctx.strokeStyle = 'red';
 	ctx.stroke();
 }
-trapezoid(500, 400);
+trapezoid(450, 300);
 
 function diamond(x, y) {
 	ctx.translate(x, y);
@@ -215,7 +215,7 @@ function diamond(x, y) {
 	ctx.fillRect(-30, -30, 60, 60);
 	ctx.resetTransform();
 }
-diamond(650, 420);
+diamond(600, 330);
 
 function zigzag(x, y) {
 	ctx.beginPath();
@@ -226,7 +226,7 @@ function zigzag(x, y) {
 	}
 	ctx.stroke();
 }
-zigzag(500, 500);
+zigzag(680, 300);
 
 function spiral(x, y) {
 	let radius = 50,
@@ -241,7 +241,7 @@ function spiral(x, y) {
 	}
 	ctx.stroke();
 }
-spiral(600, 500);
+spiral(500, 400);
 
 function star(x, y) {
 	let radius = 50,
@@ -256,7 +256,7 @@ function star(x, y) {
 	ctx.fillStyle = 'gold';
 	ctx.fill();
 }
-star(550, 620);
+star(620, 400);
 
 // Pie Chart with text
 
@@ -291,3 +291,36 @@ results.forEach(function (result) {
 	ctx.fillStyle = result.color;
 	ctx.fill();
 });
+
+// Bouncing Ball
+let lastTime = null;
+function frame(time) {
+	if (lastTime != null) {
+		updateAnimation(Math.min(100, time - lastTime) / 1000);
+	}
+	lastTime = time;
+	requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+let x = 550,
+	y = 650;
+let radius = 10;
+let speedX = 100,
+	speedY = 60;
+
+function updateAnimation(step) {
+	ctx.clearRect(520, 520, 250, 250);
+	ctx.strokeStyle = 'blue';
+	ctx.lineWidth = 4;
+	ctx.strokeRect(520, 520, 250, 250);
+
+	x += step * speedX;
+	y += step * speedY;
+	if (x < 520 + radius + 3 || x > 770 - radius - 3) speedX = -speedX;
+	if (y < 520 + radius + 3 || y > 770 - radius - 3) speedY = -speedY;
+	ctx.fillStyle = 'red';
+	ctx.beginPath();
+	ctx.arc(x, y, radius, 0, 7);
+	ctx.fill();
+}
